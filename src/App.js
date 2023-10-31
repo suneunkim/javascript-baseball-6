@@ -2,40 +2,71 @@ import { MissionUtils, Console } from "@woowacourse/mission-utils";
 
 class App {
   constructor() {
-    this.reandomNumber = null;
+    this.correctNumber = "";
   }
   // 1. 게임 시작
   async play() {
-    console.log("숫자 야구 게임을 시작합니다");
-    await this.gameStart();
+    this.gameStart();
   }
 
   // 2. 정답 생성과 힌트 제공
   async gameStart() {
+    Console.print("숫자 야구 게임을 시작합니다");
     this.correctNumber = this.generateRandomNumber();
-    this.judgment();
+    await this.judgment();
+  }
+
+  // 3. 게임 종료 후 재시작 여부 확인
+  async gameEnd() {
+    const { result } = this.compare();
+    if (result) Console.print("3개의 숫자를 모두 맞히셨습니다! 게임 종료");
+    const userReply = await Console.readLineAsync("게임을 새로 시작하라면 1, 종료하려면 2를 입력하세요");
+
+    switch (userReply) {
+      case "1": {
+        await this.gameStart();
+        break;
+      }
+      case "2": {
+        Console.print("게임을 종료합니다.");
+        break;
+      }
+      default: {
+        Console.print("잘못 입력하셨습니다.");
+        await this.gameEnd();
+        break;
+      }
+    }
   }
 
   async judgment() {
     //입력 받고 검사하고 힌트 출력하기
     const userAnswer = await Console.readLineAsync();
-    const validatedUserAnswer = this.validation(userAnswer);
-    console.log(validatedUserAnswer);
-    this.hintMessage(this.compare(validatedUserAnswer));
+    try {
+      const validatedUserAnswer = this.validation(userAnswer);
+      Console.print(`숫자를 입력해주세요: ${validatedUserAnswer}`);
+      this.hintMessage(this.compare(validatedUserAnswer));
+    } catch (error) {
+      Console.print(error.message);
+      this.gameEnd();
+    }
   }
 
-  hintMessage({ strike, ball }) {
+  hintMessage({ strike, ball, out }) {
     let message = "";
     if (ball > 0) message += `${ball}볼 `;
     if (ball > 0 && strike > 0) message += `${ball}볼 ${strike}스트라이크`;
     if (strike > 0) message += `${strike}스트라이크`;
-    return console.log(message);
+    if (out) message += "낫싱";
+    Console.print(message);
+    return message;
   }
 
   compare(validatedUserAnswer) {
     let strike = 0;
     let ball = 0;
     let out = true;
+    let result = false;
 
     for (let i = 0; i < 3; i++) {
       if (this.correctNumber[i] === validatedUserAnswer[i]) {
@@ -46,7 +77,10 @@ class App {
         return out;
       }
     }
-    return { strike, ball, out };
+    if (strike === 3) {
+      result = true;
+    }
+    return { strike, ball, out, result };
   }
 
   validation(userAnswer) {
